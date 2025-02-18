@@ -1,35 +1,30 @@
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime, timedelta
-import sqlite3
+import openpyxl
+from openpyxl import Workbook
+import os
 
-# Database instellen
-DATABASE = "graan_database.db"
+# Excel bestand instellen
+EXCEL_FILE = "bonnen.xlsx"
 
-def maak_database():
-    """Maak de database aan als deze niet bestaat."""
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS graan_bonnen (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                graansoort TEXT NOT NULL,
-                gewicht REAL NOT NULL,
-                datum TEXT NOT NULL,
-                tht TEXT NOT NULL
-            )
-        """)
-    print("Database en tabel zijn ingesteld.")
+def maak_excel():
+    """Maak de Excel-sheet aan als deze niet bestaat."""
+    if not os.path.exists(EXCEL_FILE):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Graan Bonnen"
+        ws.append(["ID", "Graansoort", "Gewicht", "Datum", "THT"])
+        wb.save(EXCEL_FILE)
+    print("Excel-bestand is ingesteld.")
 
-# Functie: Nieuwe bon opslaan in de database
+# Functie: Nieuwe bon opslaan in de Excel-sheet
 def sla_bon_op(graansoort, gewicht, datum, tht):
-    with sqlite3.connect(DATABASE) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO graan_bonnen (graansoort, gewicht, datum, tht)
-            VALUES (?, ?, ?, ?)
-        """, (graansoort, gewicht, datum, tht))
-    conn.commit()
+    wb = openpyxl.load_workbook(EXCEL_FILE)
+    ws = wb.active
+    new_id = ws.max_row  # Nieuwe ID is de volgende rij
+    ws.append([new_id, graansoort, gewicht, datum, tht])
+    wb.save(EXCEL_FILE)
 
 # Functie: Cijfers toevoegen aan input
 def voeg_cijfer_toe(cijfer):
@@ -51,7 +46,7 @@ def maak_bon():
         tht = vandaag + timedelta(days=6 * 30)  # THT = 6 maanden later
         tht_str = tht.strftime("%Y-%m-%d")
 
-        # Opslaan in de database
+        # Opslaan in de Excel-sheet
         sla_bon_op(graansoort, gewicht, datum_str, tht_str)
 
         # Boninformatie in de terminal tonen
@@ -115,5 +110,5 @@ for key, row, col in keypad:
               command=lambda k=key: voeg_cijfer_toe(k)).grid(row=row, column=col, padx=5, pady=5)
 
 # Start de applicatie
-maak_database()
+maak_excel()
 root.mainloop()
